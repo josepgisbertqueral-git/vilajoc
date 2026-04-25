@@ -173,15 +173,15 @@ def main():
 
             frame_count += 1
 
-
-            # UDP PACKET
             current_time = time.time()
 
-            if current_time - last_send_time >= 3:  # 3s
+            # Comprovació de seguretat: Només intentar enviar si hi ha resultats vàlids
+            if pose_result and pose_result.is_valid() and current_time - last_send_time >= 0.5:
                 payload = []
 
-                for person_id in range(pose_result.num_people):
-                    if person_id in body_movements:
+                for person_id in rangfe(pose_result.num_people):
+                    # Comprovar que el tracker realment té dades d'aquest ID
+                    if 'body_movements' in locals() and person_id in body_movements:
                         movement = body_movements[person_id]
 
                         velocity = float(movement.velocity_magnitude)
@@ -196,14 +196,13 @@ def main():
                         })
 
                 if payload:
-                    udp_sock.sendto(json.dumps(payload).encode(), udp_address)
-                    log_file.write(json.dumps({
-                        "data": payload
-                    }) + "\n")
+                    try:
+                        udp_sock.sendto(json.dumps(payload).encode(), udp_address)
+                        log_file.write(json.dumps({"data": payload}) + "\n")
+                    except Exception as e:
+                        print(f"Error enviant UDP: {e}")
 
                 last_send_time = current_time
-            # FIN UDP PACKET
-
 
     except KeyboardInterrupt:
         print("\nInterrupted by user")
