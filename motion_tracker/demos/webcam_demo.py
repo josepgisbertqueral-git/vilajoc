@@ -16,6 +16,8 @@ import argparse
 from pathlib import Path
 import time
 import cv2
+import socket
+import json
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -42,6 +44,15 @@ def get_direction(velocity_x):
     elif velocity_x < -0.1:
         return "LEFT"
     return "—"
+
+def detect_squat(pose_result, person_id):
+    """Simple squat detection using hip vs knee height."""
+    hip = pose_result.get_keypoint("left_hip", person_id)
+    knee = pose_result.get_keypoint("left_knee", person_id)
+
+    if hip and knee:
+        return hip.y > knee.y  # lower in image = larger y
+    return False
 
 
 def main():
@@ -84,6 +95,11 @@ def main():
     body_movement_tracker = BodyMovementTracker(buffer_size=30, fps=30.0, use_3d=True)
     renderer = SkeletonRenderer(show_keypoints=True, show_connections=True, show_labels=False)
 
+    # Initialize UDP socket
+    udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp_address = ("127.0.0.1", 4242)
+    last_send_time = 0.0
+
     # Key joints to display
     key_joints = [
         'left_shoulder', 'right_shoulder',
@@ -97,6 +113,7 @@ def main():
     screenshot_count = 0
 
     print("Starting detection... (Press 'q' to quit)\n")
+    log_file = open("udp_log.jsonl", "a", buffering=1)
 
     try:
         while True:
@@ -106,7 +123,7 @@ def main():
 
             frame = cv2.flip(frame, 1)
             pose_result = estimator.process_frame(frame)
-
+            
             if pose_result and pose_result.is_valid():
                 # Calculate angles and movement
                 angles = angle_calculator.calculate_all_angles(pose_result)
@@ -137,7 +154,7 @@ def main():
                     # Draw stats panel for this person
                     position = 'top_left' if person_id == 0 else 'top_right'
                     frame = renderer.draw_stats_panel(frame, stats, position=position)
-
+            
             else:
                 cv2.putText(frame, "No pose detected", (50, 50),
                            cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
@@ -155,6 +172,38 @@ def main():
                 print(f"Saved: {filename}")
 
             frame_count += 1
+
+
+            # UDP PACKET
+            current_time = time.time()
+
+            if current_time - last_send_time >= 3:  # 3s
+                payload = []
+
+                for person_id in range(pose_result.num_people):
+                    if person_id in body_movements:
+                        movement = body_movements[person_id]
+
+                        velocity = float(movement.velocity_magnitude)
+                        direction = get_direction(movement.velocity_x)
+                        squat = detect_squat(pose_result, person_id)
+
+                        payload.append({
+                            "id": person_id,
+                            "velocity": velocity,
+                            "direction": direction,
+                            "squat": squat
+                        })
+
+                if payload:
+                    udp_sock.sendto(json.dumps(payload).encode(), udp_address)
+                    log_file.write(json.dumps({
+                        "data": payload
+                    }) + "\n")
+
+                last_send_time = current_time
+            # FIN UDP PACKET
+
 
     except KeyboardInterrupt:
         print("\nInterrupted by user")
