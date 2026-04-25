@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 import numpy as np
 
 
@@ -47,32 +47,47 @@ class PoseResult:
     """Results from pose estimation.
 
     Attributes:
-        keypoints: List of detected keypoints
+        keypoints: List of detected keypoints (single person for backward compatibility)
+        keypoints_list: List of keypoint lists for multiple people
         timestamp: Timestamp of the frame (milliseconds)
         confidence: Overall detection confidence
         image_width: Original image width
         image_height: Original image height
+        num_people: Number of people detected
     """
     keypoints: List[Keypoint]
     timestamp: float = 0.0
     confidence: float = 1.0
     image_width: int = 0
     image_height: int = 0
+    keypoints_list: Optional[List[List[Keypoint]]] = None
+    num_people: int = 1
 
-    def get_keypoint(self, name: str) -> Optional[Keypoint]:
-        """Get keypoint by name."""
-        for kp in self.keypoints:
+    def get_keypoint(self, name: str, person_id: int = 0) -> Optional[Keypoint]:
+        """Get keypoint by name for a specific person."""
+        keypoints = self.keypoints if person_id == 0 or not self.keypoints_list else self.keypoints_list[person_id]
+        if keypoints is None:
+            return None
+        for kp in keypoints:
             if kp.name == name:
                 return kp
         return None
 
-    def get_keypoints_by_names(self, names: List[str]) -> List[Optional[Keypoint]]:
-        """Get multiple keypoints by names."""
-        return [self.get_keypoint(name) for name in names]
+    def get_keypoints_by_names(self, names: List[str], person_id: int = 0) -> List[Optional[Keypoint]]:
+        """Get multiple keypoints by names for a specific person."""
+        return [self.get_keypoint(name, person_id) for name in names]
 
     def is_valid(self, min_confidence: float = 0.5) -> bool:
         """Check if pose detection is valid."""
         return self.confidence >= min_confidence and len(self.keypoints) > 0
+    
+    def get_person_pose(self, person_id: int = 0) -> Optional[List[Keypoint]]:
+        """Get keypoints for a specific person."""
+        if person_id == 0:
+            return self.keypoints
+        if self.keypoints_list and person_id < len(self.keypoints_list):
+            return self.keypoints_list[person_id]
+        return None
 
 
 class PoseEstimator(ABC):

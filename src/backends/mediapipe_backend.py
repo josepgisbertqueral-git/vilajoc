@@ -57,6 +57,7 @@ class MediaPipeBackend(PoseEstimator):
         smooth_landmarks: bool = True,
         static_image_mode: bool = False,
         model_path: Optional[str] = None,
+        num_poses: int = 2,
     ):
         """Initialize MediaPipe backend.
 
@@ -68,6 +69,7 @@ class MediaPipeBackend(PoseEstimator):
             smooth_landmarks: Apply temporal smoothing (not used in Tasks API)
             static_image_mode: Treat each frame independently (VIDEO vs IMAGE mode)
             model_path: Path to model file (will download if not provided)
+            num_poses: Number of poses to detect (1-4, default 2)
         """
         if not MEDIAPIPE_AVAILABLE:
             raise ImportError(
@@ -83,6 +85,7 @@ class MediaPipeBackend(PoseEstimator):
             smooth_landmarks=smooth_landmarks,
             static_image_mode=static_image_mode,
             model_path=model_path,
+            num_poses=num_poses,
         )
 
         self.landmarker = None
@@ -151,7 +154,7 @@ class MediaPipeBackend(PoseEstimator):
             options = vision.PoseLandmarkerOptions(
                 base_options=base_options,
                 running_mode=running_mode,
-                num_poses=1,
+                num_poses=min(self.config.get('num_poses', 2), 4),  # MediaPipe supports up to 4
                 min_pose_detection_confidence=self.config.get('min_detection_confidence', 0.5),
                 min_pose_presence_confidence=self.config.get('min_detection_confidence', 0.5),
                 min_tracking_confidence=self.config.get('min_tracking_confidence', 0.5),
@@ -168,13 +171,13 @@ class MediaPipeBackend(PoseEstimator):
             return False
 
     def process_frame(self, frame: np.ndarray) -> Optional[PoseResult]:
-        """Process frame and detect pose.
+        """Process frame and detect multiple poses.
 
         Args:
             frame: Input image (BGR format)
 
         Returns:
-            PoseResult or None
+            PoseResult with all detected poses or None
         """
         if not self.is_initialized or self.landmarker is None:
             return None
@@ -199,46 +202,61 @@ class MediaPipeBackend(PoseEstimator):
             if not detection_result.pose_landmarks or len(detection_result.pose_landmarks) == 0:
                 return None
 
-            # Extract first pose (we only detect one person)
-            pose_landmarks = detection_result.pose_landmarks[0]
-            pose_world_landmarks = detection_result.pose_world_landmarks[0] if detection_result.pose_world_landmarks else None
-
-            # Convert to our keypoint format
-            keypoints = []
             height, width = frame.shape[:2]
-
-            for idx, landmark in enumerate(pose_landmarks):
-                name = self.LANDMARK_NAMES[idx]
-
-                # Get world landmarks if available
-                world_x, world_y, world_z = None, None, None
-                if pose_world_landmarks:
-                    world_lm = pose_world_landmarks[idx]
-                    world_x = world_lm.x
-                    world_y = world_lm.y
-                    world_z = world_lm.z
-
-                keypoint = Keypoint(
-                    name=name,
-                    x=landmark.x,
-                    y=landmark.y,
-                    z=landmark.z,
-                    visibility=landmark.visibility,
-                    presence=getattr(landmark, 'presence', 1.0),
-                    world_x=world_x,
-                    world_y=world_y,
-                    world_z=world_z,
+            
+            # Process all detected poses
+            all_keypoints_list = []
+            confidences = []
+            
+            for pose_idx, pose_landmarks in enumerate(detection_result.pose_landmarks):
+                pose_world_landmarks = (
+                    detection_result.pose_world_landmarks[pose_idx] 
+                    if detection_result.pose_world_landmarks and pose_idx < len(detection_result.pose_world_landmarks)
+                    else None
                 )
-                keypoints.append(keypoint)
 
-            # Calculate overall confidence
-            avg_visibility = np.mean([kp.visibility for kp in keypoints])
+                # Convert to our keypoint format
+                keypoints = []
+
+                for idx, landmark in enumerate(pose_landmarks):
+                    name = self.LANDMARK_NAMES[idx]
+
+                    # Get world landmarks if available
+                    world_x, world_y, world_z = None, None, None
+                    if pose_world_landmarks:
+                        world_lm = pose_world_landmarks[idx]
+                        world_x = world_lm.x
+                        world_y = world_lm.y
+                        world_z = world_lm.z
+
+                    keypoint = Keypoint(
+                        name=name,
+                        x=landmark.x,
+                        y=landmark.y,
+                        z=landmark.z,
+                        visibility=landmark.visibility,
+                        presence=getattr(landmark, 'presence', 1.0),
+                        world_x=world_x,
+                        world_y=world_y,
+                        world_z=world_z,
+                    )
+                    keypoints.append(keypoint)
+
+                all_keypoints_list.append(keypoints)
+                avg_visibility = np.mean([kp.visibility for kp in keypoints])
+                confidences.append(avg_visibility)
+
+            # For backward compatibility, use first person as primary
+            primary_keypoints = all_keypoints_list[0]
+            avg_confidence = np.mean(confidences)
 
             return PoseResult(
-                keypoints=keypoints,
-                confidence=avg_visibility,
+                keypoints=primary_keypoints,
+                confidence=avg_confidence,
                 image_width=width,
                 image_height=height,
+                keypoints_list=all_keypoints_list if len(all_keypoints_list) > 1 else None,
+                num_people=len(all_keypoints_list),
             )
 
         except Exception as e:

@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.backends.mediapipe_backend import MediaPipeBackend
 from src.core.angle_calculator import AngleCalculator
 from src.core.motion_analyzer import MotionAnalyzer
+from src.core.body_movement_tracker import BodyMovementTracker
 from src.visualization.skeleton_renderer import SkeletonRenderer
 
 
@@ -102,6 +103,7 @@ def main():
             model_complexity=1,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
+            num_poses=2,  # Detect up to 2 people
         )
     else:
         print(f"Unknown backend: {args.backend}")
@@ -117,6 +119,13 @@ def main():
     # Initialize angle calculator and motion analyzer
     angle_calculator = AngleCalculator(use_3d=True)
     motion_analyzer = MotionAnalyzer(buffer_size=30, smoothing_window=5)
+    
+    # Initialize body movement tracker for game export
+    body_movement_tracker = BodyMovementTracker(
+        buffer_size=30,
+        fps=30.0,
+        use_3d=True,
+    )
 
     # Initialize renderer
     renderer = SkeletonRenderer(
@@ -152,6 +161,9 @@ def main():
             if pose_result and pose_result.is_valid():
                 # Update motion analyzer
                 motion_analyzer.update(pose_result)
+                
+                # Update body movement tracker (calculates direction and velocity)
+                body_movements = body_movement_tracker.update(pose_result)
 
                 # Calculate angles
                 angles = None
@@ -167,6 +179,7 @@ def main():
                 # Prepare statistics - show in two panels
                 # Left panel: Posture metrics
                 posture_stats = {}
+                posture_stats['People Detected'] = str(pose_result.num_people)
                 if posture_metrics.get('head_tilt') is not None:
                     posture_stats['Head Tilt'] = f"{posture_metrics['head_tilt']:.1f}deg"
                 if posture_metrics.get('neck_angle') is not None:
@@ -177,6 +190,22 @@ def main():
                     posture_stats['Shoulder Tilt'] = f"{posture_metrics['shoulder_tilt']:.1f}deg"
                 if posture_metrics.get('spine_curve') is not None:
                     posture_stats['Spine Curve'] = f"{posture_metrics['spine_curve']:.1f}deg"
+                
+                # Add movement data to stats (person 0)
+                if 0 in body_movements:
+                    movement = body_movements[0]
+                    posture_stats[''] = ''  # Separator
+                    posture_stats['Move Speed'] = f"{movement.velocity_magnitude:.2f}px/s"
+                    
+                    # Check X-axis velocity for left/right direction
+                    if movement.velocity_x > 0.5:
+                        direction = "Right"
+                    elif movement.velocity_x < -0.5:
+                        direction = "Left"
+                    else:
+                        direction = "—"  # Stationary or minimal movement
+                    
+                    posture_stats['Move Dir'] = direction
 
                 # Right panel: Joint angles
                 joint_stats = {

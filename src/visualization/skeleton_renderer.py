@@ -9,7 +9,7 @@ from ..core.pose_estimator import PoseResult
 class SkeletonRenderer:
     """Render skeleton and annotations on frames."""
 
-    # Color scheme
+    # Color scheme with multiple colors for different people
     COLORS = {
         'keypoint': (0, 255, 0),       # Green
         'connection': (0, 255, 255),   # Yellow
@@ -18,6 +18,10 @@ class SkeletonRenderer:
         'angle_bad': (0, 0, 255),      # Red
         'text': (255, 255, 255),       # White
         'background': (0, 0, 0),       # Black
+        'person_1': (0, 255, 0),       # Green
+        'person_2': (255, 0, 0),       # Blue
+        'person_3': (0, 165, 255),     # Orange
+        'person_4': (255, 255, 0),     # Cyan
     }
 
     # Skeleton connections
@@ -100,12 +104,12 @@ class SkeletonRenderer:
         pose_result: PoseResult,
         angles: Optional[Dict[str, float]] = None,
     ) -> np.ndarray:
-        """Render skeleton on frame.
+        """Render skeleton on frame for all detected people.
 
         Args:
             frame: Input image
-            pose_result: Pose detection result
-            angles: Optional dictionary of joint angles
+            pose_result: Pose detection result (may contain multiple people)
+            angles: Optional dictionary of joint angles (for first person)
 
         Returns:
             Annotated image
@@ -116,19 +120,115 @@ class SkeletonRenderer:
         annotated = frame.copy()
         height, width = frame.shape[:2]
 
-        # Draw connections first (so keypoints are on top)
-        if self.show_connections:
-            annotated = self._draw_connections(annotated, pose_result, width, height)
+        # If multiple people detected, draw all
+        if pose_result.num_people > 1 and pose_result.keypoints_list:
+            for person_id, keypoints in enumerate(pose_result.keypoints_list):
+                person_pose = PoseResult(
+                    keypoints=keypoints,
+                    confidence=pose_result.confidence,
+                    image_width=width,
+                    image_height=height,
+                )
+                # Draw connections first (so keypoints are on top)
+                if self.show_connections:
+                    annotated = self._draw_connections_multi(
+                        annotated, person_pose, width, height, person_id
+                    )
+                # Draw keypoints
+                if self.show_keypoints:
+                    annotated = self._draw_keypoints_multi(
+                        annotated, person_pose, width, height, person_id
+                    )
+        else:
+            # Single person rendering
+            # Draw connections first (so keypoints are on top)
+            if self.show_connections:
+                annotated = self._draw_connections(annotated, pose_result, width, height)
 
-        # Draw keypoints
-        if self.show_keypoints:
-            annotated = self._draw_keypoints(annotated, pose_result, width, height)
+            # Draw keypoints
+            if self.show_keypoints:
+                annotated = self._draw_keypoints(annotated, pose_result, width, height)
 
-        # Draw angles if provided
-        if angles is not None:
-            annotated = self._draw_angles(annotated, pose_result, angles, width, height)
+            # Draw angles if provided
+            if angles is not None:
+                annotated = self._draw_angles(annotated, pose_result, angles, width, height)
 
         return annotated
+
+    def _draw_keypoints_multi(
+        self,
+        frame: np.ndarray,
+        pose_result: PoseResult,
+        width: int,
+        height: int,
+        person_id: int = 0,
+    ) -> np.ndarray:
+        """Draw keypoints for a specific person with unique color."""
+        color_key = f'person_{min(person_id + 1, 4)}'
+        color = self.COLORS.get(color_key, self.COLORS['keypoint'])
+        
+        for keypoint in pose_result.keypoints:
+            if keypoint.visibility < self.min_visibility:
+                continue
+
+            x, y = keypoint.to_image_coords(width, height)
+
+            # Draw circle
+            cv2.circle(
+                frame,
+                (x, y),
+                self.keypoint_radius,
+                color,
+                -1,
+            )
+
+            # Draw label if enabled
+            if self.show_labels:
+                cv2.putText(
+                    frame,
+                    keypoint.name.replace('_', ' '),
+                    (x + 10, y - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.3,
+                    self.COLORS['text'],
+                    1,
+                )
+
+        return frame
+
+    def _draw_connections_multi(
+        self,
+        frame: np.ndarray,
+        pose_result: PoseResult,
+        width: int,
+        height: int,
+        person_id: int = 0,
+    ) -> np.ndarray:
+        """Draw skeleton connections for a specific person with unique color."""
+        color_key = f'person_{min(person_id + 1, 4)}'
+        color = self.COLORS.get(color_key, self.COLORS['connection'])
+        
+        for start_name, end_name in self.CONNECTIONS:
+            start_kp = pose_result.get_keypoint(start_name)
+            end_kp = pose_result.get_keypoint(end_name)
+
+            if (start_kp is None or end_kp is None or
+                start_kp.visibility < self.min_visibility or
+                end_kp.visibility < self.min_visibility):
+                continue
+
+            start_pos = start_kp.to_image_coords(width, height)
+            end_pos = end_kp.to_image_coords(width, height)
+
+            cv2.line(
+                frame,
+                start_pos,
+                end_pos,
+                color,
+                self.line_thickness,
+            )
+
+        return frame
 
     def _draw_keypoints(
         self,
