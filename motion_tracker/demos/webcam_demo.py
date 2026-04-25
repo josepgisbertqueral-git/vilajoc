@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """Real-time webcam pose estimation demo.
 
-This demo captures video from your webcam and performs real-time pose estimation
-with joint angle calculations and visualization.
+Tracks 2 people with key joint angles, movement direction and velocity.
 
 Usage:
-    python demos/webcam_demo.py [--camera CAMERA_ID] [--backend BACKEND]
+    python demos/webcam_demo.py [--camera CAMERA_ID]
 
 Controls:
     - Press 'q' to quit
     - Press 's' to save screenshot
-    - Press 'r' to reset statistics
 """
 
 import sys
@@ -18,14 +16,12 @@ import argparse
 from pathlib import Path
 import time
 import cv2
-import numpy as np
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.backends.mediapipe_backend import MediaPipeBackend
 from src.core.angle_calculator import AngleCalculator
-from src.core.motion_analyzer import MotionAnalyzer
 from src.core.body_movement_tracker import BodyMovementTracker
 from src.visualization.skeleton_renderer import SkeletonRenderer
 
@@ -33,42 +29,19 @@ from src.visualization.skeleton_renderer import SkeletonRenderer
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description='Real-time pose estimation webcam demo')
-    parser.add_argument(
-        '--camera',
-        type=int,
-        default=0,
-        help='Camera device ID (default: 0)'
-    )
-    parser.add_argument(
-        '--backend',
-        type=str,
-        default='mediapipe',
-        choices=['mediapipe'],
-        help='Pose estimation backend (default: mediapipe)'
-    )
-    parser.add_argument(
-        '--width',
-        type=int,
-        default=1280,
-        help='Camera frame width (default: 1280)'
-    )
-    parser.add_argument(
-        '--height',
-        type=int,
-        default=720,
-        help='Camera frame height (default: 720)'
-    )
-    parser.add_argument(
-        '--show-fps',
-        action='store_true',
-        help='Show FPS counter'
-    )
-    parser.add_argument(
-        '--no-angles',
-        action='store_true',
-        help='Disable angle display'
-    )
+    parser.add_argument('--camera', type=int, default=0, help='Camera device ID (default: 0)')
+    parser.add_argument('--width', type=int, default=1280, help='Frame width (default: 1280)')
+    parser.add_argument('--height', type=int, default=720, help='Frame height (default: 720)')
     return parser.parse_args()
+
+
+def get_direction(velocity_x):
+    """Convert X-axis velocity to direction text."""
+    if velocity_x > 0.1:
+        return "RIGHT"
+    elif velocity_x < -0.1:
+        return "LEFT"
+    return "—"
 
 
 def main():
@@ -76,16 +49,11 @@ def main():
     args = parse_args()
 
     print("=" * 60)
-    print("Motion Tracker - Real-time Webcam Demo")
+    print("Motion Tracker - 2 Person Pose Demo")
     print("=" * 60)
-    print(f"Camera ID: {args.camera}")
-    print(f"Backend: {args.backend}")
-    print(f"Resolution: {args.width}x{args.height}")
-    print("\nControls:")
-    print("  - Press 'q' to quit")
-    print("  - Press 's' to save screenshot")
-    print("  - Press 'r' to reset statistics")
-    print("=" * 60)
+    print(f"Camera: {args.camera} | Resolution: {args.width}x{args.height}")
+    print("Controls: 'q' to quit, 's' to save screenshot")
+    print("=" * 60 + "\n")
 
     # Initialize camera
     cap = cv2.VideoCapture(args.camera)
@@ -96,211 +64,112 @@ def main():
         print(f"Error: Could not open camera {args.camera}")
         return 1
 
-    # Initialize pose estimator
-    print("\nInitializing pose estimator...")
-    if args.backend == 'mediapipe':
-        estimator = MediaPipeBackend(
-            model_complexity=1,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-            num_poses=2,  # Detect up to 2 people
-        )
-    else:
-        print(f"Unknown backend: {args.backend}")
-        return 1
+    # Initialize components
+    print("Initializing pose estimator...")
+    estimator = MediaPipeBackend(
+        model_complexity=1,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
+        num_poses=2,  # Track up to 2 people
+    )
 
     if not estimator.initialize():
         print("Error: Failed to initialize pose estimator")
         return 1
 
-    print(f"[OK] Initialized {estimator.backend_name} backend")
-    print(f"[OK] Detecting {estimator.num_keypoints} keypoints")
+    print(f"[OK] {estimator.backend_name} initialized")
+    print("[OK] Tracking up to 2 people\n")
 
-    # Initialize angle calculator and motion analyzer
     angle_calculator = AngleCalculator(use_3d=True)
-    motion_analyzer = MotionAnalyzer(buffer_size=30, smoothing_window=5)
-    
-    # Initialize body movement tracker for game export
-    body_movement_tracker = BodyMovementTracker(
-        buffer_size=30,
-        fps=30.0,
-        use_3d=True,
-    )
+    body_movement_tracker = BodyMovementTracker(buffer_size=30, fps=30.0, use_3d=True)
+    renderer = SkeletonRenderer(show_keypoints=True, show_connections=True, show_labels=False)
 
-    # Initialize renderer
-    renderer = SkeletonRenderer(
-        show_keypoints=True,
-        show_connections=True,
-        show_labels=False,
-    )
+    # Key joints to display
+    key_joints = [
+        'left_shoulder', 'right_shoulder',
+        'left_elbow', 'right_elbow',
+        'left_hip', 'right_hip',
+        'left_knee', 'right_knee',
+    ]
 
-    # FPS calculation
-    fps_history = []
     frame_count = 0
     start_time = time.time()
     screenshot_count = 0
 
-    print("\nStarting real-time detection...\n")
+    print("Starting detection... (Press 'q' to quit)\n")
 
     try:
         while True:
-            loop_start = time.time()
-
-            # Capture frame
             ret, frame = cap.read()
             if not ret:
-                print("Error: Failed to capture frame")
                 break
 
-            # Flip frame horizontally for mirror effect
             frame = cv2.flip(frame, 1)
-
-            # Process pose
             pose_result = estimator.process_frame(frame)
 
             if pose_result and pose_result.is_valid():
-                # Update motion analyzer
-                motion_analyzer.update(pose_result)
-                
-                # Update body movement tracker (calculates direction and velocity)
+                # Calculate angles and movement
+                angles = angle_calculator.calculate_all_angles(pose_result)
                 body_movements = body_movement_tracker.update(pose_result)
 
-                # Calculate angles
-                angles = None
-                if not args.no_angles:
-                    angles = angle_calculator.calculate_all_angles(pose_result)
-
-                # Render skeleton and angles
+                # Render skeleton
                 frame = renderer.render(frame, pose_result, angles)
 
-                # Calculate posture metrics
-                posture_metrics = angle_calculator.calculate_posture_metrics(pose_result)
-
-                # Prepare statistics - show in two panels
-                # Left panel: Posture metrics
-                posture_stats = {}
-                posture_stats['People Detected'] = str(pose_result.num_people)
-                if posture_metrics.get('head_tilt') is not None:
-                    posture_stats['Head Tilt'] = f"{posture_metrics['head_tilt']:.1f}deg"
-                if posture_metrics.get('neck_angle') is not None:
-                    posture_stats['Neck Angle'] = f"{posture_metrics['neck_angle']:.1f}deg"
-                if posture_metrics.get('body_lean') is not None:
-                    posture_stats['Body Lean'] = f"{posture_metrics['body_lean']:.1f}deg"
-                if posture_metrics.get('shoulder_tilt') is not None:
-                    posture_stats['Shoulder Tilt'] = f"{posture_metrics['shoulder_tilt']:.1f}deg"
-                if posture_metrics.get('spine_curve') is not None:
-                    posture_stats['Spine Curve'] = f"{posture_metrics['spine_curve']:.1f}deg"
-                
-                # Add movement data to stats (person 0)
-                if 0 in body_movements:
-                    movement = body_movements[0]
-                    posture_stats[''] = ''  # Separator
-                    posture_stats['Move Speed'] = f"{movement.velocity_magnitude:.2f}px/s"
+                # Display stats for each detected person
+                for person_id in range(pose_result.num_people):
+                    stats = {'Person': f"#{person_id + 1}"}
                     
-                    # Check X-axis velocity for left/right direction
-                    if movement.velocity_x > 0.5:
-                        direction = "Right"
-                    elif movement.velocity_x < -0.5:
-                        direction = "Left"
-                    else:
-                        direction = "—"  # Stationary or minimal movement
-                    
-                    posture_stats['Move Dir'] = direction
-
-                # Right panel: Joint angles
-                joint_stats = {
-                    'Confidence': f"{pose_result.confidence * 100:.0f}%",
-                }
-
-                # Add key angles to stats
-                if angles and not args.no_angles:
-                    # Show major joints
-                    key_angles = [
-                        'left_elbow', 'right_elbow',
-                        'left_shoulder', 'right_shoulder',
-                        'left_knee', 'right_knee',
-                        'left_hip', 'right_hip',
-                    ]
-                    for joint in key_angles:
-                        if angles.get(joint) is not None:
-                            smoothed = motion_analyzer.get_smoothed_angle(joint)
-                            if smoothed:
-                                # Format joint name nicely
+                    # Add joint angles
+                    if angles:
+                        for joint in key_joints:
+                            if joint in angles and angles[joint] is not None:
+                                angle_val = angles[joint]
                                 joint_name = joint.replace('_', ' ').title()
-                                # Abbreviate for space
                                 joint_name = joint_name.replace('Left', 'L').replace('Right', 'R')
-                                joint_stats[joint_name] = f"{smoothed:.0f}deg"
-
-                # Add FPS if enabled
-                if args.show_fps:
-                    current_fps = 1.0 / (time.time() - loop_start + 1e-6)
-                    fps_history.append(current_fps)
-                    if len(fps_history) > 30:
-                        fps_history.pop(0)
-                    avg_fps = np.mean(fps_history)
-                    joint_stats['FPS'] = f"{avg_fps:.1f}"
-
-                # Draw stats panels
-                if posture_stats:
-                    frame = renderer.draw_stats_panel(frame, posture_stats, position='top_left')
-                frame = renderer.draw_stats_panel(frame, joint_stats, position='top_right')
+                                stats[joint_name] = f"{angle_val:.0f}°"
+                    
+                    # Add movement data
+                    if person_id in body_movements:
+                        movement = body_movements[person_id]
+                        stats['Velocity'] = f"{movement.velocity_magnitude:.1f}px/s"
+                        stats['Direction'] = get_direction(movement.velocity_x)
+                    
+                    # Draw stats panel for this person
+                    position = 'top_left' if person_id == 0 else 'top_right'
+                    frame = renderer.draw_stats_panel(frame, stats, position=position)
 
             else:
-                # No pose detected
-                cv2.putText(
-                    frame,
-                    "No pose detected",
-                    (50, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1.0,
-                    (0, 0, 255),
-                    2,
-                )
+                cv2.putText(frame, "No pose detected", (50, 50),
+                           cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
 
-            # Display frame
-            cv2.imshow('Motion Tracker - Webcam Demo', frame)
+            cv2.imshow('Motion Tracker - 2 Person Demo', frame)
 
-            # Handle keyboard input
+            # Keyboard input
             key = cv2.waitKey(1) & 0xFF
-
             if key == ord('q'):
-                print("\nQuitting...")
                 break
             elif key == ord('s'):
-                # Save screenshot
                 screenshot_count += 1
                 filename = f"screenshot_{screenshot_count:03d}.png"
                 cv2.imwrite(filename, frame)
-                print(f"Screenshot saved: {filename}")
-            elif key == ord('r'):
-                # Reset statistics
-                motion_analyzer.clear_history()
-                fps_history.clear()
-                print("Statistics reset")
+                print(f"Saved: {filename}")
 
             frame_count += 1
 
     except KeyboardInterrupt:
-        print("\n\nInterrupted by user")
+        print("\nInterrupted by user")
 
     finally:
-        # Cleanup
         elapsed_time = time.time() - start_time
         avg_fps = frame_count / elapsed_time if elapsed_time > 0 else 0
 
         print("\n" + "=" * 60)
-        print("Session Summary")
-        print("=" * 60)
-        print(f"Total frames: {frame_count}")
-        print(f"Duration: {elapsed_time:.1f}s")
-        print(f"Average FPS: {avg_fps:.1f}")
+        print(f"Frames: {frame_count} | Duration: {elapsed_time:.1f}s | FPS: {avg_fps:.1f}")
         print("=" * 60)
 
         cap.release()
         cv2.destroyAllWindows()
-        estimator.release()
-
-    return 0
+        return 0
 
 
 if __name__ == '__main__':
