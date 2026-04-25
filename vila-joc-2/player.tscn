@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://cebsp1jyayxat"]
+
+[ext_resource type="Script" uid="uid://dr587m6k5my1e" path="res://player.gd" id="1_i3pqv"]
+[ext_resource type="Texture2D" uid="uid://cibmh4xy3cf8n" path="res://art/playerGrey_walk1.png" id="1_onrkg"]
+[ext_resource type="Texture2D" uid="uid://cknacqdvhgl0a" path="res://art/playerGrey_walk2.png" id="2_i3pqv"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_hqtel"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_onrkg")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_i3pqv")
+}],
+"loop": true,
+"name": &"caminar",
+"speed": 5.0
+}]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_sweqy"]
+radius = 54.0
+height = 136.0
+
+[node name="Player" type="RigidBody2D" unique_id=811547047]
+script = ExtResource("1_i3pqv")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=2070701080]
+sprite_frames = SubResource("SpriteFrames_hqtel")
+animation = &"caminar"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=419871539]
+shape = SubResource("CapsuleShape2D_sweqy")

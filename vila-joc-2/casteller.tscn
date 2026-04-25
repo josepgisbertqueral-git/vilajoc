@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://ca8jpj2q20785"]
+
+[ext_resource type="Texture2D" uid="uid://cibmh4xy3cf8n" path="res://art/playerGrey_walk1.png" id="1_vx855"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_jmxbl"]
+radius = 53.0
+height = 136.0
+
+[node name="Casteller" type="RigidBody2D" unique_id=238413133]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1135772214]
+shape = SubResource("CapsuleShape2D_jmxbl")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=2053035314]
+texture = ExtResource("1_vx855")
