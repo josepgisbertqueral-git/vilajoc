@@ -179,7 +179,7 @@ def main():
             if pose_result and pose_result.is_valid() and current_time - last_send_time >= 0.5:
                 payload = []
 
-                for person_id in rangfe(pose_result.num_people):
+                for person_id in range(pose_result.num_people):
                     # Comprovar que el tracker realment té dades d'aquest ID
                     if 'body_movements' in locals() and person_id in body_movements:
                         movement = body_movements[person_id]
