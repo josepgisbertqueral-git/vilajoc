@@ -41,3 +41,7 @@ logs/
 .env
 .env.local
 models/
+
+# Godot 4+ specific ignores
+.godot/
+/android/

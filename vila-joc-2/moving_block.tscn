@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://jcjngch0rbek"]
+
+[ext_resource type="PackedScene" uid="uid://1e8r58jf41xn" path="res://block.tscn" id="1_836u2"]
+
+[node name="Moving block" unique_id=105418070 instance=ExtResource("1_836u2")]
+
+[node name="CollisionShape2D" parent="." index="1" unique_id=41189560]
+position = Vector2(4.5, 50.5)

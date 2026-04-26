@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://b16ue86avwxr4"]
+
+[ext_resource type="PackedScene" uid="uid://1e8r58jf41xn" path="res://block.tscn" id="1_865ah"]
+[ext_resource type="Script" uid="uid://d0ikof64d0lhn" path="res://escena.gd" id="1_sks45"]
+[ext_resource type="Texture2D" uid="uid://dwgp6yuoxttbv" path="res://Fondo_noBarra (1).png" id="2_fanfj"]
+[ext_resource type="Script" uid="uid://0t0lgflx6nla" path="res://gamemanager.gd" id="2_ugwex"]
+[ext_resource type="Texture2D" uid="uid://3ao54k24wliw" path="res://IMG_3324.png" id="5_d4yc1"]
+[ext_resource type="Texture2D" uid="uid://dt30fyt1mxhdf" path="res://Untitled_Artwork(1).png" id="6_ssasw"]
+
+[node name="escena" type="Node2D" unique_id=1223065398]
+script = ExtResource("1_sks45")
+
+[node name="FondoNoBarra(1)2" type="Sprite2D" parent="." unique_id=281366621]
+position = Vector2(569, -1865)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("2_fanfj")
+
+[node name="FondoNoBarra(1)5" type="Sprite2D" parent="." unique_id=1916703885]
+position = Vector2(573, 77)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("2_fanfj")
+
+[node name="FondoNoBarra(1)4" type="Sprite2D" parent="." unique_id=1096088098]
+position = Vector2(577, -570)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("2_fanfj")
+
+[node name="FondoNoBarra(1)3" type="Sprite2D" parent="." unique_id=1111465173]
+position = Vector2(569, -1217)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("2_fanfj")
+
+[node name="FondoNoBarra(1)" type="Sprite2D" parent="." unique_id=61913966]
+position = Vector2(585, 725)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("2_fanfj")
+
+[node name="Block3" parent="." unique_id=1299226803 instance=ExtResource("1_865ah")]
+position = Vector2(178, 117)
+controllable = true
+
+[node name="Block" parent="." unique_id=330549105 instance=ExtResource("1_865ah")]
+position = Vector2(1285, -179)
+is_static = true
+
+[node name="Stack" type="Node2D" parent="." unique_id=689537632]
+
+[node name="Block2" parent="Stack" unique_id=711216069 instance=ExtResource("1_865ah")]
+position = Vector2(583, 553)
+is_static = true
+
+[node name="GM" type="Node2D" parent="." unique_id=374992398]
+position = Vector2(1, 0)
+script = ExtResource("2_ugwex")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=2107625284]
+position = Vector2(577, 351)
+
+[node name="Img3324" type="Sprite2D" parent="." unique_id=1524332285]
+position = Vector2(582, 552)
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("5_d4yc1")
+
+[node name="UntitledArtwork(1)" type="Sprite2D" parent="." unique_id=375511339]
+position = Vector2(584, 72)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("6_ssasw")

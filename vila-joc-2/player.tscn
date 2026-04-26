@@ -1,33 +1,75 @@
 [gd_scene format=3 uid="uid://cebsp1jyayxat"]
 
 [ext_resource type="Script" uid="uid://dr587m6k5my1e" path="res://player.gd" id="1_i3pqv"]
-[ext_resource type="Texture2D" uid="uid://cibmh4xy3cf8n" path="res://art/playerGrey_walk1.png" id="1_onrkg"]
-[ext_resource type="Texture2D" uid="uid://cknacqdvhgl0a" path="res://art/playerGrey_walk2.png" id="2_i3pqv"]
+[ext_resource type="Texture2D" uid="uid://flim0f5p4kv6" path="res://IMG_3325.png" id="2_2hs0m"]
+[ext_resource type="Texture2D" uid="uid://bfn00u15cv5xf" path="res://IMG_3322.png" id="3_hqtel"]
+[ext_resource type="Texture2D" uid="uid://cm145y2nv68tw" path="res://IMG_3320.png" id="4_2hs0m"]
+[ext_resource type="Texture2D" uid="uid://c4x10qttax55d" path="res://IMG_3319.png" id="5_1jxqw"]
+[ext_resource type="Texture2D" uid="uid://cb7i7rn2gbpc0" path="res://IMG_3318.png" id="6_dw050"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_hqtel"]
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("1_onrkg")
-}, {
-"duration": 1.0,
-"texture": ExtResource("2_i3pqv")
+"texture": ExtResource("2_2hs0m")
 }],
 "loop": true,
-"name": &"caminar",
+"name": &"default",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_hqtel")
+}],
+"loop": true,
+"name": &"dreta",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_hqtel")
+}],
+"loop": true,
+"name": &"esquerra",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("6_dw050")
+}],
+"loop": true,
+"name": &"flying",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("4_2hs0m")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_1jxqw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_dw050")
+}],
+"loop": false,
+"name": &"saltar",
 "speed": 5.0
 }]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_sweqy"]
-radius = 54.0
-height = 136.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1jxqw"]
+size = Vector2(67, 184)
 
 [node name="Player" type="RigidBody2D" unique_id=811547047]
+contact_monitor = true
+max_contacts_reported = 1
 script = ExtResource("1_i3pqv")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=2070701080]
+scale = Vector2(0.2, 0.2)
 sprite_frames = SubResource("SpriteFrames_hqtel")
-animation = &"caminar"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=419871539]
-shape = SubResource("CapsuleShape2D_sweqy")
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="." unique_id=253192979]
+position = Vector2(3.5, 48)
+shape = SubResource("RectangleShape2D_1jxqw")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

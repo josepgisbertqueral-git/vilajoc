@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://dp4xpthokkcuo"]
+
+[ext_resource type="PackedScene" uid="uid://ca8jpj2q20785" path="res://casteller.tscn" id="1_16k11"]
+[ext_resource type="Script" uid="uid://be0kj35qcahxr" path="res://jugador.gd" id="2_omvyu"]
+[ext_resource type="Texture2D" uid="uid://bfn00u15cv5xf" path="res://IMG_3322.png" id="3_ukil5"]
+[ext_resource type="Texture2D" uid="uid://cok8y6v73ok8a" path="res://IMG_3321.png" id="4_7st5j"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_cvhml"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_ukil5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_7st5j")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="Jugador" unique_id=238413133 instance=ExtResource("1_16k11")]
+script = ExtResource("2_omvyu")
+speed = 400
+
+[node name="NodeInf" parent="." index="3" unique_id=159240753]
+position = Vector2(0, 72)
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." index="4" unique_id=795211191]
+scale = Vector2(0.2, 0.2)
+sprite_frames = SubResource("SpriteFrames_cvhml")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

@@ -1,15 +1,28 @@
 [gd_scene format=3 uid="uid://ca8jpj2q20785"]
 
-[ext_resource type="Texture2D" uid="uid://cibmh4xy3cf8n" path="res://art/playerGrey_walk1.png" id="1_vx855"]
+[ext_resource type="Script" uid="uid://c5y6wvsb7ltxl" path="res://casteller.gd" id="1_jmxbl"]
+[ext_resource type="Texture2D" uid="uid://flim0f5p4kv6" path="res://IMG_3325.png" id="2_jmxbl"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_jmxbl"]
-radius = 53.0
-height = 136.0
+radius = 32.0
+height = 166.0
 
 [node name="Casteller" type="RigidBody2D" unique_id=238413133]
+contact_monitor = true
+max_contacts_reported = 2
+script = ExtResource("1_jmxbl")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1135772214]
 shape = SubResource("CapsuleShape2D_jmxbl")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=2053035314]
-texture = ExtResource("1_vx855")
+position = Vector2(-4.9999995, -26)
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("2_jmxbl")
+
+[node name="NodeSup" type="Node2D" parent="." unique_id=1458416846]
+editor_description = "holaaaaa"
+position = Vector2(0, -68)
+
+[node name="NodeInf" type="Node2D" parent="." unique_id=159240753]
+position = Vector2(0, 68)

@@ -1,70 +1,71 @@
 [gd_scene format=3 uid="uid://bfhheuxjiih73"]
 
-[ext_resource type="Texture2D" uid="uid://cibmh4xy3cf8n" path="res://art/playerGrey_walk1.png" id="2_0xm2m"]
-[ext_resource type="PackedScene" uid="uid://ca8jpj2q20785" path="res://casteller.tscn" id="2_h2yge"]
+[ext_resource type="Script" uid="uid://0t0lgflx6nla" path="res://gamemanager.gd" id="1_1bvp3"]
+[ext_resource type="Texture2D" uid="uid://08ac2lngrc7c" path="res://Fondo_noBarra.png" id="2_272bh"]
+[ext_resource type="Script" uid="uid://fex4gl5ulas" path="res://background.gd" id="2_kek77"]
 [ext_resource type="PackedScene" uid="uid://cebsp1jyayxat" path="res://player.tscn" id="3_h2yge"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_h2yge"]
-size = Vector2(179, 20)
-
-[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_0xm2m"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_0xm2m"]
-size = Vector2(109, 134)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_1bvp3"]
-size = Vector2(219, 20)
+[ext_resource type="Texture2D" uid="uid://3ao54k24wliw" path="res://IMG_3324.png" id="6_5vw27"]
+[ext_resource type="PackedScene" uid="uid://dp4xpthokkcuo" path="res://jugador.tscn" id="6_kek77"]
+[ext_resource type="Texture2D" uid="uid://dt30fyt1mxhdf" path="res://Untitled_Artwork(1).png" id="7_kek77"]
+[ext_resource type="Script" uid="uid://ccqgiiu0ugh1g" path="res://stack_pivot.gd" id="8_5vw27"]
 
 [node name="Main" type="Node2D" unique_id=2974700]
+script = ExtResource("1_1bvp3")
 
-[node name="Casteller" parent="." unique_id=58409678 instance=ExtResource("2_h2yge")]
-position = Vector2(580, 683)
+[node name="Player3" parent="." unique_id=811547047 instance=ExtResource("3_h2yge")]
+position = Vector2(496, 696)
+speed = 400.0
+id = 0
+is_static = false
 
-[node name="CollisionShape2D2" type="CollisionShape2D" parent="Casteller" unique_id=524141890]
-position = Vector2(-1.5, -57)
-shape = SubResource("RectangleShape2D_h2yge")
+[node name="Player2" parent="." unique_id=2004639053 instance=ExtResource("3_h2yge")]
+position = Vector2(495, 509)
+speed = 400.0
+id = 0
+is_static = false
 
-[node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=124249904]
-physics_material_override = SubResource("PhysicsMaterial_0xm2m")
+[node name="Background" type="Node2D" parent="." unique_id=1047766454]
+script = ExtResource("2_kek77")
+step_amount = 280.0
+move_duration = 0.5
 
-[node name="Sprite2D" type="Sprite2D" parent="StaticBody2D" unique_id=1791266325]
-position = Vector2(579, 824)
-texture = ExtResource("2_0xm2m")
+[node name="Bg1" type="Sprite2D" parent="Background" unique_id=1328605698]
+position = Vector2(390, 1233)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_272bh")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=1242242638]
-position = Vector2(581, 823)
-shape = SubResource("RectangleShape2D_0xm2m")
+[node name="Bg2" type="Sprite2D" parent="Background" unique_id=320123508]
+position = Vector2(1765, 15)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_272bh")
 
-[node name="Casteller2" parent="." unique_id=238413133 instance=ExtResource("2_h2yge")]
-position = Vector2(585, 547)
+[node name="Bg3" type="Sprite2D" parent="Background" unique_id=789612615]
+position = Vector2(1835, -380)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_272bh")
 
-[node name="CollisionShape2D2" type="CollisionShape2D" parent="Casteller2" unique_id=840666898]
-position = Vector2(-12.5, -57)
-shape = SubResource("RectangleShape2D_1bvp3")
+[node name="Jugador" parent="." unique_id=2052579396 instance=ExtResource("6_kek77")]
+position = Vector2(-241, -77)
+id = 4
 
-[node name="Casteller3" parent="." unique_id=1637057770 instance=ExtResource("2_h2yge")]
-position = Vector2(586, 407)
+[node name="GameManager" type="Node2D" parent="." unique_id=452685437]
+script = ExtResource("1_1bvp3")
 
-[node name="PinJoint2D2" type="PinJoint2D" parent="." unique_id=1442775181]
-position = Vector2(581, 751)
-node_a = NodePath("../StaticBody2D")
-node_b = NodePath("../Casteller")
-bias = 0.21
-disable_collision = false
-angular_limit_enabled = true
-angular_limit_lower = -0.21816616
+[node name="Img3324" type="Sprite2D" parent="." unique_id=372232859]
+position = Vector2(1268, 448)
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("6_5vw27")
 
-[node name="PinJoint2D" type="PinJoint2D" parent="." unique_id=814222039]
-position = Vector2(583, 621)
-node_a = NodePath("../Casteller")
-node_b = NodePath("../Casteller2")
-disable_collision = false
+[node name="brana" type="Sprite2D" parent="." unique_id=1863978334]
+position = Vector2(458, 96)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("7_kek77")
 
-[node name="PinJoint2D3" type="PinJoint2D" parent="." unique_id=156784820]
-position = Vector2(580, 475)
-node_a = NodePath("../Casteller2")
-node_b = NodePath("../Casteller3")
-disable_collision = false
+[node name="Player" parent="." unique_id=493385548 instance=ExtResource("3_h2yge")]
+position = Vector2(827, 369)
+speed = 400.0
+id = 0
+is_static = false
 
-[node name="Player" parent="." unique_id=811547047 instance=ExtResource("3_h2yge")]
-position = Vector2(485, 78)
+[node name="StackPivot" type="Node2D" parent="." unique_id=1498581317]
+script = ExtResource("8_5vw27")
