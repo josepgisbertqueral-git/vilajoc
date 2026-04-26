@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://dn1m6bdgaigv4"]
+
+[ext_resource type="Script" uid="uid://dti3akvmhwydn" path="res://hud.gd" id="1_37p78"]
+
+[node name="HUD" type="CanvasLayer" unique_id=1183047540]
+script = ExtResource("1_37p78")
+
+[node name="ScoreLabel" type="Label" parent="." unique_id=428586058]
+offset_right = 40.0
+offset_bottom = 88.0
+theme_override_font_sizes/font_size = 64
+text = "0"
+
+[node name="Message" type="Label" parent="." unique_id=2030323604]
+offset_top = 187.0
+offset_right = 544.0
+offset_bottom = 275.0
+theme_override_font_sizes/font_size = 64
+text = "Partida individual"
+
+[node name="StartButton" type="Button" parent="." unique_id=595339413]
+offset_top = 91.0
+offset_right = 564.0
+offset_bottom = 187.0
+theme_override_font_sizes/font_size = 64
+text = "Començar partida"
+
+[node name="MessageTimer" type="Timer" parent="." unique_id=1916367865]
+wait_time = 2.0
+one_shot = true
+
+[connection signal="pressed" from="StartButton" to="." method="_on_start_button_pressed"]
+[connection signal="timeout" from="MessageTimer" to="." method="_on_message_timer_timeout"]
